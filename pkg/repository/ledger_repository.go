@@ -36,12 +36,9 @@ func (gbr *gormLedgerRepository) GetEntriesByPriority(ctx context.Context, accou
 	dbQuery := gbr.db.WithContext(ctx).
 		Select("activity", "priority", "sum(amount) as amount", "min(expiry) as expiry").
 		Group("activity").
-		Group("priority")
-	if len(accountID) > 0 {
-		dbQuery = dbQuery.Having("account_id = ?", accountID)
-	}else {
-		dbQuery = dbQuery.Select("account_id").Group("account_id")
-	}
+		Group("priority").
+		Where("account_id = ?", accountID)
+
 	db := dbQuery.
 		Table("ledger").
 		Find(&entries)

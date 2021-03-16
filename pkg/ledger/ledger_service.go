@@ -14,7 +14,7 @@ import (
 type Service interface {
 	CreateLedgerEntry(ctx context.Context, info *model.Ledger) error
 	GetEntries(ctx context.Context, query *dto.LogQuery) ([]*model.Ledger, error)
-	ExpireCredits(ctx context.Context) ([]*model.Ledger, error)
+	ExpireCredits(ctx context.Context, accountID uuid.UUID) ([]*model.Ledger, error)
 	AddDebitEntry(ctx context.Context, debitEntry *model.Ledger) error
 }
 
@@ -46,9 +46,8 @@ func (ls *ledgerService) GetEntries(ctx context.Context, query *dto.LogQuery) ([
 
 // any priority level that has the credit and some value remaining from the debit and expiry
 // and has crossed the timing is eligible to be  expired
-func (ls *ledgerService) ExpireCredits(ctx context.Context) ([]*model.Ledger, error) {
-	allAccounts := ""
-	_, totalCredit, err := ls.fetchAggregateEntries(ctx, allAccounts)
+func (ls *ledgerService) ExpireCredits(ctx context.Context, accountID uuid.UUID) ([]*model.Ledger, error) {
+	_, totalCredit, err := ls.fetchAggregateEntries(ctx, accountID.String())
 	if err != nil {
 		return nil, err
 	}

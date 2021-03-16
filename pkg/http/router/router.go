@@ -1,7 +1,7 @@
 package router
 
 import (
-	accountinfo "account/pkg/accountinfo"
+	 "account/pkg/accountinfo"
 	"account/pkg/http/internal/handler"
 	"account/pkg/http/internal/middleware"
 	"account/pkg/ledger"
@@ -15,6 +15,7 @@ import (
 const (
 	accountCreditPath = "/account/credit"
 	accountLogsPath = "/account/logs"
+	accountPath = "/account/{userid}"
 	accountDebitPath = "/account/debit"
 )
 
@@ -29,7 +30,8 @@ func NewRouter(lgr *zap.Logger, accountInfoService accountinfo.Service, ledgerSe
 	router.HandleFunc(accountLogsPath, withMiddlewares(lgr, middleware.WithErrorHandler(lgr, ah.GetLogs))).
 		Methods(http.MethodGet).
 		Queries("activity", "{activity}")
-
+	router.HandleFunc(accountPath, withMiddlewares(lgr, middleware.WithErrorHandler(lgr, ah.GetAccountInfoFor))).
+		Methods(http.MethodGet)
 	return router
 }
 

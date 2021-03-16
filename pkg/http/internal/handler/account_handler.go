@@ -110,3 +110,18 @@ func (ah *AccountHandler) Debit(resp http.ResponseWriter, req *http.Request) err
 	return nil
 }
 
+func (ah *AccountHandler) GetAccountInfoFor(resp http.ResponseWriter, req *http.Request) error {
+	ctx := context.Background()
+	params := mux.Vars(req)
+	fmt.Println(params)
+	userID, _ := uuid.Parse(params["userid"])
+	accounts, err := ah.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{UserID: userID})
+	if err != nil {
+		return err
+	}
+	existingAccount := accounts[0]
+
+	ah.lgr.Debug("msg", zap.String("eventCode", utils.AccountInfoUpdated))
+	utils.WriteSuccessResponse(resp, http.StatusOK, existingAccount)
+	return nil
+}

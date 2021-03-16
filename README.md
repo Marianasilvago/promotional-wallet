@@ -83,3 +83,10 @@ http://localhost:8888/account/debit \
 }'
 ```
 
+get current balance using
+```shell script
+curl -X GET \
+  http://localhost:8888/account/a900c144-9f25-4324-994f-451a7ac9d46d \
+  -H 'cache-control: no-cache' \
+```
+

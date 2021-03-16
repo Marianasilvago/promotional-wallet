@@ -2,9 +2,11 @@ package handler
 
 import (
 	"account/pkg/accountinfo"
+	"account/pkg/accountinfo/dto"
 	"account/pkg/accountinfo/model"
 	"account/pkg/config"
 	"account/pkg/ledger"
+	lm "account/pkg/ledger/model"
 	"context"
 	"fmt"
 	"go.uber.org/zap"
@@ -30,10 +32,19 @@ func (abh *AccountBackgroundHandler) UpdateAccountExpiredEntries() error {
 	ctx := context.Background()
 	abh.lgr.Sugar().Infof("Updating account data..")
 
-	expiredEntries, err := abh.ledgerSvc.ExpireCredits(ctx)
+	accounts, err := abh.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{})
 	if err != nil {
 		return err
 	}
+	expiredEntries := make([]*lm.Ledger, 0)
+	for _, account := range accounts {
+		expiredEntriesForAccount, err := abh.ledgerSvc.ExpireCredits(ctx, account.ID)
+		if err != nil {
+			return err
+		}
+		expiredEntries = append(expiredEntries, expiredEntriesForAccount...)
+	}
+
 	for _, expiredEntry := range expiredEntries {
 		fmt.Println(fmt.Sprintf("=================%+v", expiredEntry))
 		accountInfo := &model.AccountInfo{

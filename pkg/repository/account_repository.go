@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	emptyUUID = "00000000-0000-0000-0000-000000000000"
+)
+
 type AccountRepository interface {
 	CreateOrUpdateAccountInfo(ctx context.Context, accountInfo *model.AccountInfo) error
 	GetAccountData(ctx context.Context, accountQuery *dto.AccountQuery) ([]model.AccountInfo, error)
@@ -25,7 +29,7 @@ func (gar *gormAccountRepository) CreateOrUpdateAccountInfo(ctx context.Context,
 
 	db := gar.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "id"}},
+			Columns: []clause.Column{{Name: "id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"balance",
 				"updated_at",
@@ -44,10 +48,9 @@ func (gar *gormAccountRepository) GetAccountData(ctx context.Context, accountQue
 	defer cancel()
 
 	query := gar.db.WithContext(ctx)
-	if accountQuery != nil && accountQuery.UserID.String() != "" {
+	if accountQuery != nil && accountQuery.UserID.String() != emptyUUID {
 		query = query.Where("user_id = ?", accountQuery.UserID.String())
-	}
-	if accountQuery != nil && accountQuery.AccountID.String() != "" {
+	} else if accountQuery != nil && accountQuery.AccountID.String() != emptyUUID {
 		query = query.Where("id = ?", accountQuery.AccountID.String())
 	}
 	db := query.Find(&res)
