@@ -10,16 +10,16 @@ import (
 )
 
 type LedgerRepository interface {
-	CreateLedgerEntry(ctx context.Context, ledgerEntry *model.Ledger) error
+	CreateLedgerEntries(ctx context.Context, ledgerEntry []*model.Ledger) error
 	GetEntries(ctx context.Context, query *dto.LogQuery) ([]*model.Ledger, error)
-	//GetLedgerData(ctx context.Context, accountQuery *dto.LedgerQuery) ([]model.Ledger, error)
+	GetEntriesByPriority(ctx context.Context)	 ([]*model.AggregateEntry, error)
 }
 
 type gormLedgerRepository struct {
 	db *gorm.DB
 }
 
-func (gbr *gormLedgerRepository) CreateLedgerEntry(ctx context.Context, ledgerEntry *model.Ledger) error {
+func (gbr *gormLedgerRepository) CreateLedgerEntries(ctx context.Context, ledgerEntry []*model.Ledger) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
@@ -29,6 +29,18 @@ func (gbr *gormLedgerRepository) CreateLedgerEntry(ctx context.Context, ledgerEn
 	}
 
 	return nil
+}
+func (gbr *gormLedgerRepository) GetEntriesByPriority(ctx context.Context)	 ([]*model.AggregateEntry, error) {
+	entries := make([]*model.AggregateEntry, 0)
+
+	dbQuery := gbr.db.WithContext(ctx)
+	db := dbQuery.Select("activity", "priority", "sum(amount) as amount").Group("activity").Group("priority").Table("ledger").Find(&entries)
+	if db.Error != nil {
+		return nil, fmt.Errorf("fetching ledger entry failed. error %w", db.Error)
+	}
+
+	return entries, nil
+
 }
 
 func (gbr *gormLedgerRepository) GetEntries(ctx context.Context, logQuery *dto.LogQuery) ([]*model.Ledger, error) {

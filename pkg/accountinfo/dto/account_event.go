@@ -7,14 +7,16 @@ import (
 )
 
 const (
-	Credit = "Credit"
-	Debit  = "Debit"
+	Credit     = "Credit"
+	Debit      = "Debit"
+	Expiration = "Expiration"
 )
 
 func GetAllowedActivityTypes() map[string]bool {
 	return map[string]bool{
-		Credit: true,
-		Debit:  true,
+		Credit:     true,
+		Debit:      true,
+		Expiration: true,
 	}
 }
 
@@ -38,12 +40,17 @@ func (e *AccountEvent) GetCreditLedgerEntry(info accountInfo.AccountInfo) *model
 	return l
 }
 
-func (e *AccountEvent) GetAccountInfo(info accountInfo.AccountInfo) *accountInfo.AccountInfo {
+func (e *AccountEvent) GetAccountInfo(info accountInfo.AccountInfo, activity string) *accountInfo.AccountInfo {
 	l := &accountInfo.AccountInfo{
 		ID:      info.ID,
 		UserID:  info.UserID,
 		Balance: e.Amount,
 	}
+
+	if activity == Debit {
+		l.Balance = l.Balance * -1
+	}
+
 	return l
 }
 

@@ -47,4 +47,14 @@ curl -X GET \
  
 ```
 
+Debit balance request
+```shell script      
+curl -X POST \
+http://localhost:8888/account/debit \
+-H 'content-type: application/json' \
+-d '{
+    "userId":"a900c144-9f25-4324-994f-451a7ac9d46d",
+    "amount":2 
+}'
+```
 

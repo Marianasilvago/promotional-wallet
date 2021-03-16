@@ -44,7 +44,7 @@ func (ah *AccountHandler) Credit(resp http.ResponseWriter, req *http.Request) er
 	if err != nil {
 		return fmt.Errorf("AccountHandler.CreateLedgerEntry . error %v", err)
 	}
-	err = ah.accountSvc.CreateOrUpdateAccountInfo(ctx, ae.GetAccountInfo(accounts[0]))
+	err = ah.accountSvc.CreateOrUpdateAccountInfo(ctx, ae.GetAccountInfo(accounts[0], dto.Credit))
 	if err != nil {
 		return fmt.Errorf("AccountHandler.CreateLedgerEntry . error %v", err)
 	}
@@ -93,11 +93,11 @@ func (ah *AccountHandler) Debit(resp http.ResponseWriter, req *http.Request) err
 	if existingAccount.Balance < ae.Amount {
 		utils.WriteFailureResponse(resp, resperr.NewResponseError(http.StatusPreconditionFailed, contract.AccountDoesntHaveEnoughBalance))
 	}
-	err = ah.ledgerSvc.CreateLedgerEntry(ctx, ae.GetDebitLedgerEntry(accounts[0]))
+	err = ah.ledgerSvc.AddDebitEntry(ctx, ae.GetDebitLedgerEntry(accounts[0]))
 	if err != nil {
 		return fmt.Errorf("AccountHandler.CreateLedgerEntry . error %v", err)
 	}
-	err = ah.accountSvc.CreateOrUpdateAccountInfo(ctx, ae.GetAccountInfo(accounts[0]))
+	err = ah.accountSvc.CreateOrUpdateAccountInfo(ctx, ae.GetAccountInfo(accounts[0], dto.Debit))
 	if err != nil {
 		return fmt.Errorf("AccountHandler.CreateLedgerEntry . error %v", err)
 	}

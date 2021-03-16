@@ -2,6 +2,7 @@ package app
 
 import (
 	"account/pkg/accountinfo"
+	"account/pkg/background/handler"
 	"account/pkg/config"
 	"account/pkg/http/router"
 	"account/pkg/http/server"
@@ -19,8 +20,9 @@ func initHTTPServer(configFile string) {
 	config := config.NewConfig(configFile)
 	logger := initLogger(config)
 	rt := initRouter(config, logger)
+	bgh := initBackgroundHandler(config, logger)
 
-	server.NewServer(config, logger, rt).Start()
+	server.NewServer(config, logger, rt, bgh).Start()
 }
 
 func initRouter(cfg config.Config, logger *zap.Logger) http.Handler {
@@ -37,13 +39,13 @@ func initService(accountInfoRepository repository.AccountRepository, ledgerRepos
 	return accountInfoService, ledgerService
 }
 
-//func initBackgroundHandler(cfg config.Config, logger *zap.Logger) *handler.StockInfoBackgroundHandler {
-//	stockPriceRepo := initRepository(cfg)
-//	stockInfoService := initService(stockPriceRepo)
-//	stockClient := initClient(cfg.GetClientConfig())
-//
-//	return handler.NewStockInfoBackgroundHandler(logger, stockInfoService, stockClient, cfg.GetDataRefresherConfig())
-//}
+func initBackgroundHandler(cfg config.Config, logger *zap.Logger) *handler.AccountBackgroundHandler {
+	accountInfoRepository, ledgerRepository := initRepository(cfg)
+	accountInfoService, ledgerService := initService(accountInfoRepository, ledgerRepository)
+
+
+	return handler.NewAccountBackgroundHandler(logger, accountInfoService, ledgerService, cfg.GetDataRefresherConfig())
+}
 
 func initRepository(cfg config.Config) (repository.AccountRepository, repository.LedgerRepository) {
 	dbConfig := cfg.GetDBConfig()

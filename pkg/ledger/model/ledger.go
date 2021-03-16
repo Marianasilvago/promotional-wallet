@@ -19,3 +19,11 @@ type Ledger struct {
 func (Ledger) TableName() string {
 	return "ledger"
 }
+
+
+type AggregateEntry struct {
+	Activity string `gorm:"type:string" json:"activity"`
+	Priority int64 `gorm:"type:integer" json:"priority"`
+	Amount    int64 `gorm:"column:amount;type:integer" json:"amount"`
+	Expiry time.Time `gorm:"column:expiry;default:now()" json:"expiry"`
+}
