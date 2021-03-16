@@ -44,14 +44,16 @@ func (gar *gormAccountRepository) GetAccountData(ctx context.Context, accountQue
 	defer cancel()
 
 	query := gar.db.WithContext(ctx)
-	if accountQuery != nil && accountQuery.UserID != "" {
-		query = query.Where("user_id = ?", accountQuery.UserID)
+	if accountQuery != nil && accountQuery.UserID.String() != "" {
+		query = query.Where("user_id = ?", accountQuery.UserID.String())
+	}
+	if accountQuery != nil && accountQuery.AccountID.String() != "" {
+		query = query.Where("id = ?", accountQuery.AccountID.String())
 	}
 	db := query.Find(&res)
 	if db.Error != nil {
 		return nil, fmt.Errorf("get account data failed: %w", db.Error)
 	}
-	fmt.Println(res)
 
 	return res, nil
 }

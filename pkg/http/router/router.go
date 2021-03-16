@@ -29,7 +29,6 @@ func NewRouter(lgr *zap.Logger, accountInfoService accountinfo.Service, ledgerSe
 	router.HandleFunc(accountLogsPath, withMiddlewares(lgr, middleware.WithErrorHandler(lgr, ah.GetLogs))).
 		Methods(http.MethodGet).
 		Queries("activity", "{activity}")
-	//router.HandleFunc(accountInfoPath, withMiddlewares(lgr, middleware.WithErrorHandler(lgr, ah.GetStockInfo))).Methods(http.MethodGet)
 
 	return router
 }

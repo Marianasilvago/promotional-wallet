@@ -12,7 +12,7 @@ import (
 type LedgerRepository interface {
 	CreateLedgerEntries(ctx context.Context, ledgerEntry []*model.Ledger) error
 	GetEntries(ctx context.Context, query *dto.LogQuery) ([]*model.Ledger, error)
-	GetEntriesByPriority(ctx context.Context)	 ([]*model.AggregateEntry, error)
+	GetEntriesByPriority(ctx context.Context, accountID string) ([]*model.AggregateEntry, error)
 }
 
 type gormLedgerRepository struct {
@@ -30,11 +30,21 @@ func (gbr *gormLedgerRepository) CreateLedgerEntries(ctx context.Context, ledger
 
 	return nil
 }
-func (gbr *gormLedgerRepository) GetEntriesByPriority(ctx context.Context)	 ([]*model.AggregateEntry, error) {
+func (gbr *gormLedgerRepository) GetEntriesByPriority(ctx context.Context, accountID string) ([]*model.AggregateEntry, error) {
 	entries := make([]*model.AggregateEntry, 0)
 
-	dbQuery := gbr.db.WithContext(ctx)
-	db := dbQuery.Select("activity", "priority", "sum(amount) as amount").Group("activity").Group("priority").Table("ledger").Find(&entries)
+	dbQuery := gbr.db.WithContext(ctx).
+		Select("activity", "priority", "sum(amount) as amount", "min(expiry) as expiry").
+		Group("activity").
+		Group("priority")
+	if len(accountID) > 0 {
+		dbQuery = dbQuery.Having("account_id = ?", accountID)
+	}else {
+		dbQuery = dbQuery.Select("account_id").Group("account_id")
+	}
+	db := dbQuery.
+		Table("ledger").
+		Find(&entries)
 	if db.Error != nil {
 		return nil, fmt.Errorf("fetching ledger entry failed. error %w", db.Error)
 	}
@@ -57,20 +67,6 @@ func (gbr *gormLedgerRepository) GetEntries(ctx context.Context, logQuery *dto.L
 
 	return entries, nil
 }
-
-//
-//func (gbr *gormLedgerRepository) GetLedgerData(ctx context.Context, accountQuery *dto.LedgerQuery) ([]model.Ledger, error) {
-//	var res []model.Ledger
-//	ctx, cancel := context.WithTimeout(ctx, time.Second)
-//	defer cancel()
-//
-//	db := gbr.db.WithContext(ctx).Where("fsym in ? and tsym in ?", accountQuery.Fsyms, accountQuery.Tsyms).Find(&res)
-//	if db.Error != nil {
-//		return nil, fmt.Errorf("get account data failed: %w", db.Error)
-//	}
-//
-//	return res, nil
-//}
 
 func NewLedgerRepository(db *gorm.DB) LedgerRepository {
 	return &gormLedgerRepository{

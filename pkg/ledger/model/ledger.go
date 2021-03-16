@@ -26,4 +26,5 @@ type AggregateEntry struct {
 	Priority int64 `gorm:"type:integer" json:"priority"`
 	Amount    int64 `gorm:"column:amount;type:integer" json:"amount"`
 	Expiry time.Time `gorm:"column:expiry;default:now()" json:"expiry"`
+	AccountID uuid.UUID `gorm:"type:uuid" json:"account_id"`
 }

@@ -3,6 +3,7 @@ package dto
 import (
 	accountInfo "account/pkg/accountinfo/model"
 	"account/pkg/ledger/model"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -65,7 +66,8 @@ func (e *AccountEvent) GetDebitLedgerEntry(info accountInfo.AccountInfo) *model.
 }
 
 type AccountQuery struct {
-	UserID string
+	UserID uuid.UUID
+	AccountID uuid.UUID
 }
 
 type LogQuery struct {

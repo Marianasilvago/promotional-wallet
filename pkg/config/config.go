@@ -11,7 +11,6 @@ type Config struct {
 	logFileConfig       LogFileConfig
 	httpServerConfig    HTTPServerConfig
 	tickerIntervalInSec int
-	clientConfig        ClientConfig
 	dataRefresherConfig DataRefresherConfig
 }
 
@@ -35,10 +34,6 @@ func (config Config) GetDataRefresherConfig() DataRefresherConfig {
 	return config.dataRefresherConfig
 }
 
-func (config Config) GetClientConfig() ClientConfig {
-	return config.clientConfig
-}
-
 func NewConfig(configFile string) Config {
 	viper.AutomaticEnv()
 
@@ -54,7 +49,6 @@ func NewConfig(configFile string) Config {
 		logConfig:           newLogConfig(),
 		logFileConfig:       newLogFileConfig(),
 		httpServerConfig:    newHTTPServerConfig(),
-		clientConfig:        newClientConfig(),
 		dataRefresherConfig: newDataRefresherConfig(),
 	}
 }

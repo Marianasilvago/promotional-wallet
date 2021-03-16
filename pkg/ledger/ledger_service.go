@@ -6,6 +6,7 @@ import (
 	"account/pkg/repository"
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"sort"
 	"time"
 )
@@ -13,7 +14,7 @@ import (
 type Service interface {
 	CreateLedgerEntry(ctx context.Context, info *model.Ledger) error
 	GetEntries(ctx context.Context, query *dto.LogQuery) ([]*model.Ledger, error)
-	ExpireCredits(ctx context.Context) error
+	ExpireCredits(ctx context.Context) ([]*model.Ledger, error)
 	AddDebitEntry(ctx context.Context, debitEntry *model.Ledger) error
 }
 
@@ -43,38 +44,37 @@ func (ls *ledgerService) GetEntries(ctx context.Context, query *dto.LogQuery) ([
 	return entries, nil
 }
 
-func (ls *ledgerService) ExpireCredits(ctx context.Context) error {
-	return nil
+// any priority level that has the credit and some value remaining from the debit and expiry
+// and has crossed the timing is eligible to be  expired
+func (ls *ledgerService) ExpireCredits(ctx context.Context) ([]*model.Ledger, error) {
+	allAccounts := ""
+	_, totalCredit, err := ls.fetchAggregateEntries(ctx, allAccounts)
+	if err != nil {
+		return nil, err
+	}
+	expiryEntries := make([]*model.Ledger, 0)
+	for priority, credit := range totalCredit {
+		if credit.Expiry.Before(time.Now()) && credit.Amount > 0 {
+			var expiryEntry *model.Ledger
+			expiryEntry = &model.Ledger{
+				AccountID: credit.AccountID,
+				Amount:    credit.Amount,
+				Priority:  priority,
+				Activity:  dto.Expiration,
+				Expiry:    time.Now(),
+				CreatedAt: time.Now(),
+			}
+			expiryEntries = append(expiryEntries, expiryEntry)
+		}
+
+	}
+	return expiryEntries, nil
 }
 func (ls *ledgerService) AddDebitEntry(ctx context.Context, debitEntryRequest *model.Ledger) error {
-	aggregateEntries, err := ls.repository.GetEntriesByPriority(ctx)
+	_, totalCredit, err := ls.fetchAggregateEntries(ctx, debitEntryRequest.AccountID.String())
 	if err != nil {
 		return err
 	}
-	groupedAggregateEntries := groupByPriorityAndType(aggregateEntries)
-	sortedPriorities := getSortedKeys(groupedAggregateEntries)
-	totalCredit := make(map[int64]int64, len(sortedPriorities))
-	for _, priority := range sortedPriorities {
-		totalCredit[priority] = 0
-	}
-	// read the debit, credit and expired
-	// credit minus expired grouped by priority
-	for _, priority := range sortedPriorities {
-		// Assumption is that no negative credits are there per priority.
-		// The current logic is ensuring that.
-		if priorityEntries, ok := groupedAggregateEntries[priority]; ok {
-			if creditEntry, ok := priorityEntries[dto.Credit]; ok {
-				totalCredit[creditEntry.Priority] += creditEntry.Amount
-			}
-			if debitEntry, ok := priorityEntries[dto.Debit]; ok {
-				totalCredit[debitEntry.Priority] -= debitEntry.Amount
-			}
-			if expiredEntry, ok := priorityEntries[dto.Expiration]; ok {
-				totalCredit[expiredEntry.Priority] -= expiredEntry.Amount
-			}
-		}
-	}
-	fmt.Println("555555")
 	targetDebit := debitEntryRequest.Amount
 	debitEntries := make([]*model.Ledger, 0)
 
@@ -83,20 +83,20 @@ func (ls *ledgerService) AddDebitEntry(ctx context.Context, debitEntryRequest *m
 			break
 		}
 		var debitEntry *model.Ledger
-		if credit <= targetDebit {
+		if credit.Amount <= targetDebit {
 			debitEntry = &model.Ledger{
 				AccountID: debitEntryRequest.AccountID,
-				Amount:    credit,
+				Amount:    credit.Amount,
 				Priority:  priority,
 				Activity:  dto.Debit,
 				Expiry:    time.Now(),
 				CreatedAt: time.Now(),
 			}
-			targetDebit -= credit
+			targetDebit -= credit.Amount
 		} else {
 			debitEntry = &model.Ledger{
 				AccountID: debitEntryRequest.AccountID,
-				Amount:    credit - targetDebit,
+				Amount:    credit.Amount - targetDebit,
 				Priority:  priority,
 				Activity:  dto.Debit,
 				Expiry:    time.Now(),
@@ -115,6 +115,50 @@ func (ls *ledgerService) AddDebitEntry(ctx context.Context, debitEntryRequest *m
 	}
 
 	return nil
+}
+
+type ExpirableAmount struct {
+	Amount    int64
+	Expiry    time.Time
+	AccountID uuid.UUID
+}
+
+func (ls *ledgerService) fetchAggregateEntries(ctx context.Context, accountID string) (map[int64]map[string]*model.AggregateEntry, map[int64]*ExpirableAmount, error) {
+	aggregateEntries, err := ls.repository.GetEntriesByPriority(ctx, accountID)
+	if err != nil {
+		return nil, nil, err
+	}
+	groupedAggregateEntries := groupByPriorityAndType(aggregateEntries)
+	sortedPriorities := getSortedKeys(groupedAggregateEntries)
+
+	totalCredit := make(map[int64]*ExpirableAmount, len(sortedPriorities))
+	for _, priority := range sortedPriorities {
+		totalCredit[priority] = &ExpirableAmount{}
+	}
+	// read the debit, credit and expired
+	// credit minus expired grouped by priority
+	for _, priority := range sortedPriorities {
+		// Assumption is that no negative credits are there per priority.
+		// The current logic is ensuring that.
+		if priorityEntries, ok := groupedAggregateEntries[priority]; ok {
+			if creditEntry, ok := priorityEntries[dto.Credit]; ok {
+				totalCredit[creditEntry.Priority].Amount += creditEntry.Amount
+				totalCredit[creditEntry.Priority].Expiry = creditEntry.Expiry
+				totalCredit[creditEntry.Priority].AccountID = creditEntry.AccountID
+			}
+			if debitEntry, ok := priorityEntries[dto.Debit]; ok {
+				totalCredit[debitEntry.Priority].Amount -= debitEntry.Amount
+				totalCredit[debitEntry.Priority].Expiry = debitEntry.Expiry
+				totalCredit[debitEntry.Priority].AccountID = debitEntry.AccountID
+			}
+			if expiredEntry, ok := priorityEntries[dto.Expiration]; ok {
+				totalCredit[expiredEntry.Priority].Amount -= expiredEntry.Amount
+				totalCredit[expiredEntry.Priority].Expiry = expiredEntry.Expiry
+				totalCredit[expiredEntry.Priority].AccountID = expiredEntry.AccountID
+			}
+		}
+	}
+	return groupedAggregateEntries, totalCredit, err
 }
 
 func getSortedKeys(entries map[int64]map[string]*model.AggregateEntry) []int64 {

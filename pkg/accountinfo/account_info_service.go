@@ -17,9 +17,13 @@ type accountInfoService struct {
 	repository repository.AccountRepository
 }
 
-
-func (sis *accountInfoService) CreateOrUpdateAccountInfo(ctx context.Context, accountInfoEvent *model.AccountInfo) error {
-	accountInfos, err := sis.repository.GetAccountData(ctx, &dto.AccountQuery{UserID: accountInfoEvent.UserID.String()})
+func (ais *accountInfoService) CreateOrUpdateAccountInfo(ctx context.Context, accountInfoEvent *model.AccountInfo) error {
+	accountQuery := &dto.AccountQuery{
+		UserID:    accountInfoEvent.UserID,
+		AccountID: accountInfoEvent.ID,
+	}
+	accountInfos, err := ais.repository.GetAccountData(ctx, accountQuery)
+	fmt.Println(accountQuery)
 	if err != nil {
 		return fmt.Errorf("Service.GetAccountsFor", err)
 	}
@@ -31,16 +35,16 @@ func (sis *accountInfoService) CreateOrUpdateAccountInfo(ctx context.Context, ac
 	}
 	existingAccountInfo := accountInfos[0]
 	existingAccountInfo.UpdateBalance(accountInfoEvent.Balance)
-	err = sis.repository.CreateOrUpdateAccountInfo(ctx, &existingAccountInfo)
+	err = ais.repository.CreateOrUpdateAccountInfo(ctx, &existingAccountInfo)
 	if err != nil {
 		return fmt.Errorf("Service.CreateOrUpdateAccountInfo failed. Error: %w", err)
 	}
 	return nil
 }
 
-func (sis *accountInfoService) GetAccountsFor(ctx context.Context, accountQuery *dto.AccountQuery) ([]model.AccountInfo, error) {
+func (ais *accountInfoService) GetAccountsFor(ctx context.Context, accountQuery *dto.AccountQuery) ([]model.AccountInfo, error) {
 	fmt.Println(accountQuery)
-	accountInfos, err := sis.repository.GetAccountData(ctx, accountQuery)
+	accountInfos, err := ais.repository.GetAccountData(ctx, accountQuery)
 	if err != nil {
 		return nil, fmt.Errorf("Service.GetAccountsFor", err)
 	}

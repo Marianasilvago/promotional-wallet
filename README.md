@@ -37,12 +37,14 @@ Design an event store
 Check the latest status of the db before the insertion of the DB
 - Have some checkpoints of the state of the database.
 
+
 Interpret the state of the system from the credits with expiry - debits.
 
 ### Assume:
 	User service exists
 		- Prepopulate the user DB with the user data.
 	- each user has one account only
+	- expiration is done using the minimum expiry in a group of priorities
 
 Run the queries:
 ```
@@ -60,7 +62,7 @@ curl -X POST \
   http://localhost:8888/account/credit \
   -H 'cache-control: no-cache' \
   -H 'content-type: application/json' \
-  -d '{ "userId":"a900c144-9f25-4324-994f-451a7ac9d46d", "amount":2, "type":"subscription", "priority":2, "expiry":1605688837 }'
+  -d '{ "userId":"a900c144-\-4324-994f-451a7ac9d46d", "amount":2, "type":"subscription", "priority":2, "expiry":1605688837 }'
 ```
 
 GET Credit logs request

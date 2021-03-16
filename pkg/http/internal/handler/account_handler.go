@@ -9,6 +9,7 @@ import (
 	"account/pkg/ledger"
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 
@@ -36,7 +37,8 @@ func (ah *AccountHandler) Credit(resp http.ResponseWriter, req *http.Request) er
 	if err != nil {
 		return err
 	}
-	accounts, err := ah.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{UserID: ae.UserID})
+	userID, _ := uuid.Parse(ae.UserID)
+	accounts, err := ah.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{UserID: userID})
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,8 @@ func (ah *AccountHandler) Debit(resp http.ResponseWriter, req *http.Request) err
 	if err != nil {
 		return err
 	}
-	accounts, err := ah.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{UserID: ae.UserID})
+	userID, _ := uuid.Parse(ae.UserID)
+	accounts, err := ah.accountSvc.GetAccountsFor(ctx, &dto.AccountQuery{UserID: userID})
 	if err != nil {
 		return err
 	}
