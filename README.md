@@ -28,6 +28,29 @@
 
 `docker logs account-service-go -f`
 
+## Design
+Design an event store
+	- credit 2 - expiry t+5
+	- credit 2 - expiry t+2
+	- debit 3 - 
+
+Check the latest status of the db before the insertion of the DB
+- Have some checkpoints of the state of the database.
+
+Interpret the state of the system from the credits with expiry - debits.
+
+### Assume:
+	User service exists
+		- Prepopulate the user DB with the user data.
+	- each user has one account only
+
+Run the queries:
+```
+INSERT INTO public.accounts
+(id, user_id, balance, created_at, updated_at)
+VALUES(gen_random_uuid(), gen_random_uuid(), 0, timezone('utc'::text, now()), timezone('utc'::text, now()));
+```
+
 ## Verifying the Functionality
 
 Add Balance  Request
